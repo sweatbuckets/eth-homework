@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
-import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
+import { useAccount, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
 import { sepolia } from 'wagmi/chains';
 
 export const COUNTER_ABI = [
@@ -42,13 +42,6 @@ export function ContractWriter({ onToastChange }: ContractWriterProps) {
     }, 2500);
   }, [onToastChange]);
 
-  // 카운트 조회
-  const { refetch } = useReadContract({
-    address: CONTRACT_ADDRESS,
-    abi: COUNTER_ABI,
-    functionName: 'count',
-  });
-
   // increment/decrement 함수 호출(트랜잭션 전송)
   const { writeContract, data: txHash, isPending } = useWriteContract();
 
@@ -56,11 +49,6 @@ export function ContractWriter({ onToastChange }: ContractWriterProps) {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash: txHash,
   });
-
-  useEffect(() => {
-    if (!isSuccess) return;
-    refetch();
-  }, [isSuccess, refetch]);
 
   useEffect(() => {
     if (isPending && !prevPendingRef.current) {
