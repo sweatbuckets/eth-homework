@@ -8,26 +8,26 @@
 
 ### Smart Contract
 
-- [ ] Solidity 0.8.26 이상 사용
-- [ ] 최소 1개 이상의 상태 변수
-- [ ] 최소 2개 이상의 public/external 함수
+- [x] Solidity 0.8.26 이상 사용
+- [x] 최소 1개 이상의 상태 변수
+- [x] 최소 2개 이상의 public/external 함수
 - [ ] 모든 상태 변경 함수에 이벤트 발생
 - [ ] Foundry 테스트 작성 (최소 5개 테스트)
-- [ ] CEI 패턴 또는 ReentrancyGuard 적용 (해당 시)
+- [x] CEI 패턴 또는 ReentrancyGuard 적용 (해당 시)
 
 ### Frontend
 
-- [ ] Next.js App Router 사용
-- [ ] wagmi + RainbowKit으로 지갑 연결
-- [ ] 컨트랙트 상태 읽기 (useReadContract)
-- [ ] 컨트랙트 상태 쓰기 (useWriteContract)
-- [ ] 트랜잭션 대기 상태 표시 (pending indicator)
-- [ ] 에러 처리 및 사용자 피드백
+- [x] Next.js App Router 사용
+- [x] wagmi + RainbowKit으로 지갑 연결
+- [x] 컨트랙트 상태 읽기 (useReadContract)
+- [x] 컨트랙트 상태 쓰기 (useWriteContract)
+- [x] 트랜잭션 대기 상태 표시 (pending indicator)
+- [x] 에러 처리 및 사용자 피드백
 
 ### Deployment
 
-- [ ] Sepolia 테스트넷에 배포
-- [ ] 배포된 컨트랙트 주소 README에 기재
+- [x] Sepolia 테스트넷에 배포
+- [x] 배포된 컨트랙트 주소 README에 기재
 - [ ] Etherscan에서 컨트랙트 검증 (선택)
 
 ---
@@ -36,17 +36,17 @@
 
 ### User Flow
 
-- [ ] 지갑 연결 기능
-- [ ] 메인 기능 1개 이상 (예: 토큰 전송, 투표, 기록 저장)
-- [ ] 사용자 잔액 또는 상태 표시
-- [ ] 트랜잭션 히스토리 또는 결과 표시
+- [x] 지갑 연결 기능
+- [x] 메인 기능 1개 이상 (예: 토큰 전송, 투표, 기록 저장)
+- [x] 사용자 잔액 또는 상태 표시
+- [x] 트랜잭션 히스토리 또는 결과 표시
 
 ### UX/UI
 
-- [ ] 반응형 레이아웃 (모바일/데스크톱)
-- [ ] 로딩 상태 표시
-- [ ] 에러 메시지 표시
-- [ ] 한국어 UI (선택)
+- [x] 반응형 레이아웃 (모바일/데스크톱)
+- [x] 로딩 상태 표시
+- [x] 에러 메시지 표시
+- [x] 한국어 UI (선택)
 
 ---
 
