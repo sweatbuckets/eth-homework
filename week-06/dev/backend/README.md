@@ -56,6 +56,49 @@ npm run start:dev
 
 기본 포트는 `3001`입니다.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    U[User]
+    FE[Frontend<br/>Next.js + wagmi + RainbowKit]
+    BE[Backend<br/>NestJS + Prisma]
+    DB[(PostgreSQL)]
+
+    subgraph CHAIN[Sepolia]
+        K[Kamin Contract]
+        M[CafeMarket Contracts<br/>Starbucks / Twosome / Mega / Hollys]
+    end
+
+    U -->|wallet connect / order request| FE
+    FE -->|GET menus / history / grass / summary| BE
+    BE -->|read / write| DB
+    BE -->|orderId, rewardAmount, signature| FE
+    FE -->|confirmOrder| K
+    K -->|recordOrder| M
+    K -->|mint KAMIN| U
+```
+
+## Order Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant FE as Frontend
+    participant BE as Backend
+    participant DB as PostgreSQL
+    participant K as Kamin
+    participant M as CafeMarket
+
+    U->>FE: 주문 요청
+    FE->>BE: POST /order
+    BE->>DB: 주문 저장
+    BE-->>FE: orderId, rewardAmount, signature
+    FE->>K: confirmOrder
+    K->>M: recordOrder
+    K-->>U: KAMIN mint
+```
+
 ## API
 
 ### `GET /order/menus?brand=starbucks`
