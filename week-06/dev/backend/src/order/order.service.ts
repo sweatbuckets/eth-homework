@@ -1,10 +1,18 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ethers } from 'ethers';
-import { PrismaService } from '../prisma/prisma.service';
+import { BrandService } from '../brand/brand.service';
+import { OrderVerificationService } from '../order-verification/order-verification.service';
+import { UserService } from '../user/user.service';
+import { OrderRepository } from './order.repository';
 
 @Injectable()
 export class OrderService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly brandService: BrandService,
+    private readonly orderVerificationService: OrderVerificationService,
+    private readonly orderRepository: OrderRepository,
+    private readonly userService: UserService,
+  ) {}
 
   private readonly wallet = new ethers.Wallet(process.env.PRIVATE_KEY!);
 
@@ -13,27 +21,15 @@ export class OrderService {
       throw new BadRequestException('User address is required');
     }
 
-    const orders = await this.prisma.order.findMany({
-      where: {
-        userAddress: {
-          equals: user,
-          mode: 'insensitive',
-        },
-      },
-      include: {
-        brand: true,
-        menu: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    const orders = await this.orderRepository.findHistoryByWalletAddress(
+      user.toLowerCase(),
+    );
 
     return {
       orders: orders.map((order) => ({
         id: order.id,
         orderId: order.orderId,
-        userAddress: order.userAddress,
+        userAddress: order.user.walletAddress,
         marketAddress: order.marketAddress,
         menuName: order.menuName,
         rewardAmount: order.rewardAmount,
@@ -53,20 +49,10 @@ export class OrderService {
     since.setHours(0, 0, 0, 0);
     since.setDate(since.getDate() - 41);
 
-    const orders = await this.prisma.order.findMany({
-      where: {
-        userAddress: {
-          equals: user,
-          mode: 'insensitive',
-        },
-        createdAt: {
-          gte: since,
-        },
-      },
-      select: {
-        createdAt: true,
-      },
-    });
+    const orders = await this.orderRepository.findGrassByWalletAddress(
+      user.toLowerCase(),
+      since,
+    );
 
     const countsByDate = new Map<string, number>();
 
@@ -97,90 +83,11 @@ export class OrderService {
     };
   }
 
-  async getSummary(user: string) {
-    if (!user) {
-      throw new BadRequestException('User address is required');
-    }
-
-    const brands = await this.prisma.brand.findMany({
-      include: {
-        _count: {
-          select: {
-            orders: {
-              where: {
-                userAddress: {
-                  equals: user,
-                  mode: 'insensitive',
-                },
-              },
-            },
-          },
-        },
-      },
-      orderBy: {
-        id: 'asc',
-      },
-    });
-
-    return {
-      brands: brands.map((brand) => ({
-        key: brand.key,
-        name: brand.name,
-        marketAddress: brand.marketAddress,
-        logoPath: brand.logoPath,
-        orderCount: brand._count.orders,
-      })),
-    };
-  }
-
-  async getMenus(brandKey: string) {
-    const brand = await this.prisma.brand.findUnique({
-      where: { key: brandKey },
-      include: {
-        menus: {
-          where: { isActive: true },
-          orderBy: { id: 'asc' },
-        },
-      },
-    });
-
-    if (!brand) {
-      throw new BadRequestException('Unknown brand');
-    }
-
-    return {
-      brand: {
-        key: brand.key,
-        name: brand.name,
-        marketAddress: brand.marketAddress,
-      },
-      menus: brand.menus.map((menu) => ({
-        name: menu.name,
-        description: menu.description,
-        pointsCost: menu.pointsCost,
-        color: menu.color,
-      })),
-    };
-  }
-
   async createOrder(user: string, market: string, menuName: string) {
-    const brand = await this.prisma.brand.findFirst({
-      where: {
-        marketAddress: {
-          equals: market,
-          mode: 'insensitive',
-        },
-      },
-      include: {
-        menus: {
-          where: {
-            name: menuName,
-            isActive: true,
-          },
-          take: 1,
-        },
-      },
-    });
+    const brand = await this.brandService.findWithMenuByMarketAndName(
+      market,
+      menuName,
+    );
 
     if (!brand) {
       throw new BadRequestException('Unknown market');
@@ -204,22 +111,77 @@ export class OrderService {
       ethers.getBytes(hash),
     );
 
-    await this.prisma.order.create({
-      data: {
-        userAddress: user,
-        marketAddress: market,
-        menuName,
-        orderId,
-        rewardAmount,
-        brandId: brand.id,
-        menuId: selectedMenu.id,
-      },
-    });
-
     return {
       orderId,
       rewardAmount,
       signature,
+    };
+  }
+
+  async confirmOrder(
+    user: string,
+    market: string,
+    menuName: string,
+    orderId: number,
+    rewardAmount: number,
+    txHash: string,
+  ) {
+    const existingOrder = await this.orderRepository.findByOrderId(orderId);
+
+    if (existingOrder) {
+      return {
+        recorded: true,
+        orderId: existingOrder.orderId,
+      };
+    }
+
+    const brand = await this.brandService.findWithMenuByMarketAndName(
+      market,
+      menuName,
+    );
+
+    if (!brand) {
+      throw new BadRequestException('Unknown market');
+    }
+
+    const selectedMenu = brand.menus[0];
+
+    if (!selectedMenu) {
+      throw new BadRequestException('Unknown menu');
+    }
+
+    if (selectedMenu.pointsCost !== rewardAmount) {
+      throw new BadRequestException('Invalid reward amount');
+    }
+
+    await this.orderVerificationService.verifyConfirmedOrder({
+      user,
+      market,
+      menuName,
+      orderId,
+      rewardAmount,
+      txHash,
+    });
+
+    const normalizedAddress = user.toLowerCase();
+
+    const syncedUser = await this.userService.findOrCreateByWalletAddress(
+      normalizedAddress,
+    );
+
+    await this.orderRepository.create({
+      userId: syncedUser.id,
+      marketAddress: market,
+      menuName,
+      orderId,
+      rewardAmount,
+      brandId: brand.id,
+      menuId: selectedMenu.id,
+    });
+
+    return {
+      recorded: true,
+      orderId,
     };
   }
 }

@@ -137,7 +137,7 @@ export function HomeClient() {
       }
 
       try {
-        const response = await fetch(`${backendUrl}/order/summary?user=${address}`, {
+        const response = await fetch(`${backendUrl}/brands/summary?user=${address}`, {
           cache: "no-store",
         });
 
@@ -291,7 +291,6 @@ export function HomeClient() {
                         const rect = event.currentTarget.getBoundingClientRect();
                         const parentRect =
                           event.currentTarget.parentElement?.getBoundingClientRect();
-
                         setTooltip({
                           day: cell,
                           x: rect.left - (parentRect?.left ?? 0) + rect.width / 2,
